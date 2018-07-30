@@ -2,7 +2,7 @@
   "name": "vueschool-forum",
   "version": "1.0.0",
   "description": "Awesome full blown mega madness forum",
-  "author": "William Awaji <william.hiroshi@gmail.com>",
+  "author": "William Awaji",
   "private": true,
   "scripts": {
     "dev": "node build/dev-server.js",
