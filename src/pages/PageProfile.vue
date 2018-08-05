@@ -1,8 +1,8 @@
 <template>
     <div class="flex-grid">
 
-        <!-- <UserProfileCard :user="user" :userPostsCount="userPostsCount" :userThreadsCount="userThreadsCount" /> -->
-        <UserProfileCardEditor :user="user" :userPostsCount="userPostsCount" :userThreadsCount="userThreadsCount" />
+        <UserProfileCard v-if="!edit" :user="user" :userPostsCount="userPostsCount" :userThreadsCount="userThreadsCount" />
+        <UserProfileCardEditor v-else :user="user" :userPostsCount="userPostsCount" :userThreadsCount="userThreadsCount" />
 
         <div class="col-7 push-top">
             <div class="profile-header">
@@ -31,6 +31,12 @@ export default {
     PostList,
     UserProfileCard,
     UserProfileCardEditor
+  },
+  props: {
+    edit: {
+      required: true,
+      type: Boolean
+    }
   },
   computed: {
     ...mapGetters({
