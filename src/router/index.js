@@ -38,7 +38,7 @@ export default new Router({
       path: '/me',
       name: 'Profile',
       component: Profile,
-      props: true
+      props: { edit: false }
     },
     {
       path: '/me/edit',
