@@ -27,9 +27,6 @@ export default new Vuex.Store({
 
       return Promise.resolve(state.posts[postId])
     },
-    updateUser (context, user) {
-      context.commit('setUser', { userId: user['.key'], user })
-    },
     createThread ({ commit, state, dispatch }, { text, title, forumId }) {
       return new Promise((resolve, reject) => {
         const threadId = 'greatThread' + Math.random()
@@ -51,19 +48,37 @@ export default new Vuex.Store({
         resolve(state.threads[threadId])
       })
     },
-    updateThread ({ commit, state }, { title, text, id }) {
+    updateThread ({ commit, state, dispatch }, { title, text, id }) {
       return new Promise((resolve, reject) => {
         const thread = state.threads[id]
-        const post = state.posts[thread.firstPostId]
-
         const newThread = { ...thread, title }
-        const newPost = { ...post, text }
 
         commit('setThread', { thread: newThread, threadId: id })
-        commit('setPost', { post: newPost, postId: thread.firstPostId })
 
-        resolve(newThread)
+        dispatch('updatePost', { id: thread.firstPostId, text }).then(() => {
+          resolve(newThread)
+        })
       })
+    },
+    updatePost ({ commit, state }, { id, text }) {
+      return new Promise((resolve, reject) => {
+        const post = state.posts[id]
+        commit('setPost', {
+          post: {
+            ...post,
+            text,
+            edited: {
+              at: Math.floor(Date.now() / 1000),
+              by: state.authId
+            }
+          },
+          postId: id
+        })
+        resolve(post)
+      })
+    },
+    updateUser (context, user) {
+      context.commit('setUser', { userId: user['.key'], user })
     }
   },
   mutations: {
