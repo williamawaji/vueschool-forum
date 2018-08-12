@@ -12,6 +12,7 @@ export default {
     const updates = {}
     updates[`posts/${postId}`] = post
     updates[`threads/${post.threadId}/posts/${postId}`] = postId
+    updates[`threads/${post.threadId}/contributors/${post.userId}`] = post.userId
     updates[`users/${post.userId}/posts/${postId}`] = postId
     firebase
       .database()
@@ -21,6 +22,7 @@ export default {
         // update post
         commit('setItem', { resource: 'posts', item: post, id: postId })
         commit('appendPostToThread', { parentId: post.threadId, childId: postId })
+        commit('appendContributorToThread', { parentId: post.threadId, childId: post.userId })
         commit('appendPostToUser', { parentId: post.userId, childId: postId })
 
         return Promise.resolve(state.posts[postId])
@@ -72,30 +74,42 @@ export default {
   updateThread ({ commit, state, dispatch }, { title, text, id }) {
     return new Promise((resolve, reject) => {
       const thread = state.threads[id]
-      const newThread = { ...thread, title }
+      const post = state.posts[thread.firstPostId]
 
-      commit('setThread', { thread: newThread, threadId: id })
+      const edited = { at: Math.floor(Date.now() / 1000), by: state.authId }
 
-      dispatch('updatePost', { id: thread.firstPostId, text }).then(() => {
-        resolve(newThread)
-      })
+      const updates = { text, edited }
+      updates[`posts/${thread.firstPostId}/text`] = text
+      updates[`posts/${thread.firstPostId}/edited`] = edited
+      updates[`threads/${id}/title`] = title
+
+      firebase
+        .database()
+        .ref()
+        .update(updates)
+        .then(() => {
+          commit('setThread', { thread: { ...thread, title }, threadId: id })
+          commit('setPost', { postId: thread.firstPostId, post: { ...post, text, edited } })
+          resolve(post)
+        })
     })
   },
   updatePost ({ commit, state }, { id, text }) {
     return new Promise((resolve, reject) => {
       const post = state.posts[id]
-      commit('setPost', {
-        post: {
-          ...post,
-          text,
-          edited: {
-            at: Math.floor(Date.now() / 1000),
-            by: state.authId
-          }
-        },
-        postId: id
-      })
-      resolve(post)
+      const edited = { at: Math.floor(Date.now() / 1000), by: state.authId }
+
+      const updates = { text, edited }
+
+      firebase
+        .database()
+        .ref('posts')
+        .child(id)
+        .update(updates)
+        .then(() => {
+          commit('setPost', { postId: id, post: { ...post, text, edited } })
+          resolve(post)
+        })
     })
   },
   updateUser ({ commit }, user) {
