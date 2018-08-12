@@ -153,9 +153,7 @@ export default {
         .child(id)
         .once('value', snapshot => {
           commit('setItem', { resource, id: snapshot.key, item: snapshot.val() })
-          setTimeout(() => {
-            resolve(state[resource][id])
-          }, 1000)
+          resolve(state[resource][id])
         })
     })
   },
