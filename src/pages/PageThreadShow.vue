@@ -1,5 +1,5 @@
 <template>
-    <div class="col-large push-top">
+    <div v-if="thread && user" class="col-large push-top">
       <h1>{{thread.title}}
         <router-link :to="{name: 'ThreadEdit', id: this.id}" class="btn-green btn-small" tag="button">
           Edit thread
@@ -18,7 +18,8 @@
 <script>
 import PostList from '@/components/PostList'
 import PostEditor from '@/components/PostEditor'
-import {mapGetters} from 'vuex'
+import { countObjectProperties } from '@/utils'
+import {mapActions} from 'vuex'
 export default {
   components: {
     PostList,
@@ -31,9 +32,6 @@ export default {
     }
   },
   computed: {
-    ...mapGetters({
-      user: 'authUser'
-    }),
     posts () {
       const postIds = Object.values(this.thread.posts)
       return Object.values(this.$store.state.posts)
@@ -45,16 +43,31 @@ export default {
     repliesCount () {
       return this.$store.getters.threadRepliesCount(this.id)
     },
+    user () {
+      return this.$store.state.users[this.thread.userId]
+    },
     contributorsCount () {
-      // find the replies
-      const replies = Object.keys(this.thread.posts)
-        .filter(postId => postId !== this.thread.firstPostId)
-        .map(postId => this.$store.state.posts[postId])
-      // get the user ids
-      const userIds = replies.map(post => post.userId)
-      // count the unique ids
-      return userIds.filter((item, index) => userIds.indexOf(item) === index).length
+      return countObjectProperties(this.thread.contributors)
     }
+  },
+  methods: {
+    ...mapActions(['fetchThread', 'fetchUser', 'fetchPosts'])
+  },
+  created () {
+    // fetch thread
+    this.fetchThread({id: this.id})
+      .then(thread => {
+        // fetch user
+        this.fetchUser({id: thread.userId})
+        // thread.posts
+        this.fetchPosts({ids: Object.keys(thread.posts)})
+          .then(posts => {
+            posts.forEach(post => {
+              // fetch user from post
+              this.fetchUser({id: post.userId})
+            })
+          })
+      })
   }
 }
 </script>

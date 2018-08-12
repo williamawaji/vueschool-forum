@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import sourceData from '@/data'
+import firebase from 'firebase'
 import { countObjectProperties } from '@/utils'
 
 Vue.use(Vuex)
@@ -15,12 +15,17 @@ const makeAppendChildToParentMutation = ({ parent, child }) => (state, { childId
 
 export default new Vuex.Store({
   state: {
-    ...sourceData,
+    categories: {},
+    forums: {},
+    threads: {},
+    posts: {},
+    users: {},
     authId: 'VXjpr2WHa8Ux4Bnggym8QFLdv5C3'
   },
   getters: {
     authUser (state) {
-      return state.users[state.authId]
+      // return state.users[state.authId]
+      return {}
     },
     userThreadsCount: state => id => countObjectProperties(state.users[id].threads),
     userPostsCount: state => id => countObjectProperties(state.users[id].posts),
@@ -89,8 +94,71 @@ export default new Vuex.Store({
         resolve(post)
       })
     },
-    updateUser (context, user) {
-      context.commit('setUser', { userId: user['.key'], user })
+    updateUser ({ commit }, user) {
+      commit('setUser', { userId: user['.key'], user })
+    },
+    fetchCategory ({ dispatch }, { id }) {
+      return dispatch('fetchItem', { resource: 'categories', emoji: 'cat', id })
+    },
+    fetchForum ({ dispatch }, { id }) {
+      return dispatch('fetchItem', { resource: 'forums', emoji: 'forum', id })
+    },
+    fetchThread ({ dispatch }, { id }) {
+      return dispatch('fetchItem', { resource: 'threads', emoji: '📄', id })
+    },
+    fetchPost ({ dispatch }, { id }) {
+      return dispatch('fetchItem', { resource: 'posts', emoji: '💬‍', id })
+    },
+    fetchUser ({ dispatch }, { id }) {
+      return dispatch('fetchItem', { resource: 'users', emoji: '🙋‍', id })
+    },
+    fetchCategories ({ dispatch }, { ids }) {
+      return dispatch('fetchItems', { resource: 'categories', emoji: 'cats', ids })
+    },
+    fetchForums ({ dispatch }, { ids }) {
+      return dispatch('fetchItems', { resource: 'forums', emoji: 'forums', ids })
+    },
+    fetchThreads ({ dispatch }, { ids }) {
+      return dispatch('fetchItems', { resource: 'threads', emoji: '📄s', ids })
+    },
+    fetchPosts ({ dispatch }, { ids }) {
+      return dispatch('fetchItems', { resource: 'posts', emoji: 'chats', ids })
+    },
+    fetchUsers ({ dispatch }, { ids }) {
+      return dispatch('fetchItems', { resource: 'users', emoji: '🙋‍s', ids })
+    },
+    fetchAllCategories ({ state, commit }) {
+      console.log('🔥', 'cat', 'all')
+      return new Promise((resolve, reject) => {
+        firebase
+          .database()
+          .ref('categories')
+          .once('value', snapshot => {
+            const categoriesObject = snapshot.val()
+            Object.keys(categoriesObject).forEach(categoryId => {
+              const category = categoriesObject[categoryId]
+              commit('setItem', { resource: 'categories', id: categoryId, item: category })
+            })
+          })
+        resolve(Object.values(state.categories))
+      })
+    },
+    fetchItem ({ state, commit }, { id, emoji, resource }) {
+      console.log('🔥', emoji, id)
+      return new Promise((resolve, reject) => {
+        firebase
+          .database()
+          .ref(resource)
+          .child(id)
+          .once('value', snapshot => {
+            commit('setItem', { resource, id: snapshot.key, item: snapshot.val() })
+            resolve(state[resource][id])
+          })
+      })
+    },
+    fetchItems ({ dispatch }, { ids, resource, emoji }) {
+      ids = Array.isArray(ids) ? ids : Object.keys(ids)
+      return Promise.all(ids.map(id => dispatch('fetchItem', { id, resource, emoji })))
     }
   },
   mutations: {
@@ -102,6 +170,10 @@ export default new Vuex.Store({
     },
     setThread (state, { thread, threadId }) {
       Vue.set(state.threads, threadId, thread)
+    },
+    setItem (state, { item, id, resource }) {
+      item['.key'] = id
+      Vue.set(state[resource], id, item)
     },
     appendPostToThread: makeAppendChildToParentMutation({ parent: 'threads', child: 'posts' }),
     appendPostToUser: makeAppendChildToParentMutation({ parent: 'users', child: 'posts' }),
