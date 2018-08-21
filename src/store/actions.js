@@ -93,8 +93,8 @@ export default {
     return firebase
       .auth()
       .createUserWithEmailAndPassword(email, password)
-      .then(user => {
-        return dispatch('createUser', { id: user.uid, email, name, username, password, avatar })
+      .then(userCredential => {
+        return dispatch('createUser', { id: userCredential.user.uid, email, name, username, password, avatar })
       })
   },
   updateThread ({ commit, state, dispatch }, { title, text, id }) {
@@ -140,6 +140,13 @@ export default {
   },
   updateUser ({ commit }, user) {
     commit('setUser', { userId: user['.key'], user })
+  },
+
+  fetchAuthUser ({ dispatch, commit }) {
+    const userId = firebase.auth().currentUser.uid
+    return dispatch('fetchUser', { id: userId }).then(() => {
+      commit('setAuthId', userId)
+    })
   },
 
   fetchCategory: ({ dispatch }, { id }) => dispatch('fetchItem', { resource: 'categories', emoji: 'cat', id }),
